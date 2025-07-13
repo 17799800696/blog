@@ -8,10 +8,21 @@ import (
 
 // SetupRoutes 设置路由
 func SetupRoutes(r *gin.Engine) {
+	// 添加请求ID中间件
+	r.Use(middleware.RequestID())
+
+	// 健康检查
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Blog API is running",
+			"status":  "ok",
+		})
+	})
+
 	// API路由组
 	api := r.Group("/api")
 	{
-		// 认证相关路由（无需认证）
+		// 认证路由
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", handlers.Register)
@@ -19,31 +30,19 @@ func SetupRoutes(r *gin.Engine) {
 		}
 
 		// 需要认证的路由
-		protected := api.Group("/")
-		protected.Use(middleware.AuthMiddleware())
+		authorized := api.Group("")
+		authorized.Use(middleware.AuthMiddleware())
 		{
-			protected.GET("/profile", handlers.GetProfile)
-			// 文章相关路由
-			protected.POST("/posts", handlers.CreatePost)
-			protected.PUT("/posts/:id", handlers.UpdatePost)
-			protected.DELETE("/posts/:id", handlers.DeletePost)
-			// 评论相关路由（统一用:id）
-			protected.POST("/posts/:id/comments", handlers.CreateComment)
+			authorized.GET("/profile", handlers.GetProfile)
+			authorized.POST("/posts", handlers.CreatePost)
+			authorized.PUT("/posts/:id", handlers.UpdatePost)
+			authorized.DELETE("/posts/:id", handlers.DeletePost)
+			authorized.POST("/posts/:id/comments", handlers.CreateComment)
 		}
 
-		// 公开路由（无需认证）
-		// 文章相关路由
+		// 公开路由
 		api.GET("/posts", handlers.GetPosts)
 		api.GET("/posts/:id", handlers.GetPost)
-		// 评论相关路由（统一用:id）
 		api.GET("/posts/:id/comments", handlers.GetComments)
 	}
-
-	// 健康检查
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"message": "Blog API is running",
-		})
-	})
 }

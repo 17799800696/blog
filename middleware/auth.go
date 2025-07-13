@@ -5,13 +5,14 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/test/blog/config"
 	"github.com/test/blog/utils"
 )
 
 // AuthMiddleware JWT认证中间件
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从请求头获取token
+		// 获取Authorization头
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -23,8 +24,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// 检查Bearer前缀
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"message": "Invalid authorization header format",
@@ -33,10 +33,12 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		tokenString := tokenParts[1]
+		// 提取token
+		token := strings.TrimPrefix(authHeader, "Bearer ")
 
 		// 验证token
-		claims, err := utils.ValidateToken(tokenString)
+		cfg := config.LoadConfig()
+		claims, err := utils.ValidateToken(token, cfg.JWT.Secret)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,

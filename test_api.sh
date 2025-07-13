@@ -74,9 +74,9 @@ echo -e "${YELLOW}2. 测试用户注册...${NC}"
 REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "testuser4",
+    "username": "testuser5",
     "password": "123456",
-    "email": "test4@example.com"
+    "email": "test5@example.com"
   }')
 echo "$REGISTER_RESPONSE"
 test_api "用户注册" "201" "$REGISTER_RESPONSE"

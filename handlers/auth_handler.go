@@ -13,28 +13,29 @@ import (
 func Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			Success: false,
-			Message: "Invalid request data: " + err.Error(),
+		utils.LogError("register validation error", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request data: " + err.Error(),
 		})
 		return
 	}
 
 	// 检查用户名是否已存在
 	var existingUser models.User
-	if err := config.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, Response{
-			Success: false,
-			Message: "Username already exists",
+	if err := config.GetDB().Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Username already exists",
 		})
 		return
 	}
 
 	// 检查邮箱是否已存在
-	if err := config.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, Response{
-			Success: false,
-			Message: "Email already exists",
+	if err := config.GetDB().Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Email already exists",
 		})
 		return
 	}
@@ -42,9 +43,10 @@ func Register(c *gin.Context) {
 	// 加密密码
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Message: "Failed to hash password",
+		utils.LogError("password hashing error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to process password",
 		})
 		return
 	}
@@ -56,42 +58,38 @@ func Register(c *gin.Context) {
 		Email:    req.Email,
 	}
 
-	if err := config.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Message: "Failed to create user",
+	if err := config.GetDB().Create(&user).Error; err != nil {
+		utils.LogError("user creation error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to create user",
 		})
 		return
 	}
 
 	// 生成JWT token
-	token, err := utils.GenerateToken(user.ID, user.Username)
+	cfg := config.LoadConfig()
+	token, err := utils.GenerateToken(user.ID, user.Username, cfg.JWT.Secret)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Message: "Failed to generate token",
+		utils.LogError("token generation error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to generate token",
 		})
 		return
 	}
 
-	// 返回响应
-	authResponse := AuthResponse{
-		Token: token,
-		User: struct {
-			ID       uint   `json:"id"`
-			Username string `json:"username"`
-			Email    string `json:"email"`
-		}{
-			ID:       user.ID,
-			Username: user.Username,
-			Email:    user.Email,
+	c.JSON(http.StatusCreated, gin.H{
+		"success": true,
+		"message": "User registered successfully",
+		"data": gin.H{
+			"token": token,
+			"user": gin.H{
+				"id":       user.ID,
+				"username": user.Username,
+				"email":    user.Email,
+			},
 		},
-	}
-
-	c.JSON(http.StatusCreated, Response{
-		Success: true,
-		Message: "User registered successfully",
-		Data:    authResponse,
 	})
 }
 
@@ -99,60 +97,56 @@ func Register(c *gin.Context) {
 func Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			Success: false,
-			Message: "Invalid request data: " + err.Error(),
+		utils.LogError("login validation error", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid request data: " + err.Error(),
 		})
 		return
 	}
 
 	// 查找用户
 	var user models.User
-	if err := config.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, Response{
-			Success: false,
-			Message: "Invalid username or password",
+	if err := config.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Invalid username or password",
 		})
 		return
 	}
 
 	// 验证密码
 	if !utils.CheckPassword(req.Password, user.Password) {
-		c.JSON(http.StatusUnauthorized, Response{
-			Success: false,
-			Message: "Invalid username or password",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "Invalid username or password",
 		})
 		return
 	}
 
 	// 生成JWT token
-	token, err := utils.GenerateToken(user.ID, user.Username)
+	cfg := config.LoadConfig()
+	token, err := utils.GenerateToken(user.ID, user.Username, cfg.JWT.Secret)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Message: "Failed to generate token",
+		utils.LogError("token generation error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to generate token",
 		})
 		return
 	}
 
-	// 返回响应
-	authResponse := AuthResponse{
-		Token: token,
-		User: struct {
-			ID       uint   `json:"id"`
-			Username string `json:"username"`
-			Email    string `json:"email"`
-		}{
-			ID:       user.ID,
-			Username: user.Username,
-			Email:    user.Email,
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Login successful",
+		"data": gin.H{
+			"token": token,
+			"user": gin.H{
+				"id":       user.ID,
+				"username": user.Username,
+				"email":    user.Email,
+			},
 		},
-	}
-
-	c.JSON(http.StatusOK, Response{
-		Success: true,
-		Message: "Login successful",
-		Data:    authResponse,
 	})
 }
 
@@ -160,26 +154,27 @@ func Login(c *gin.Context) {
 func GetProfile(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, Response{
-			Success: false,
-			Message: "User not authenticated",
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "User not authenticated",
 		})
 		return
 	}
 
 	var user models.User
-	if err := config.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, Response{
-			Success: false,
-			Message: "User not found",
+	if err := config.GetDB().First(&user, userID).Error; err != nil {
+		utils.LogError("user retrieval error", err)
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"message": "User not found",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, Response{
-		Success: true,
-		Message: "Profile retrieved successfully",
-		Data: gin.H{
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Profile retrieved successfully",
+		"data": gin.H{
 			"id":       user.ID,
 			"username": user.Username,
 			"email":    user.Email,

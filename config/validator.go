@@ -12,16 +12,9 @@ import (
 func ValidateConfig() {
 	log.Println("Validating configuration...")
 
+	// 验证必需的环境变量
 	requiredEnvVars := []string{
-		"SERVER_PORT",
-		"GIN_MODE",
-		"DB_HOST",
-		"DB_PORT",
-		"DB_USER",
-		"DB_PASSWORD",
-		"DB_NAME",
-		"JWT_SECRET",
-		"JWT_EXPIRATION_HOURS",
+		"JWT_SECRET", // 只有JWT_SECRET是真正必需的
 	}
 
 	var missingVars []string
@@ -37,19 +30,19 @@ func ValidateConfig() {
 	}
 
 	// 验证JWT过期时间
-	expirationHours := utils.GetEnvInt("JWT_EXPIRATION_HOURS")
+	expirationHours := utils.GetEnvIntWithDefault("JWT_EXPIRATION_HOURS", 24)
 	if expirationHours <= 0 {
 		log.Fatal("JWT_EXPIRATION_HOURS must be greater than 0")
 	}
 
 	// 验证服务器端口
-	port := utils.GetEnv("SERVER_PORT")
+	port := utils.GetEnvWithDefault("SERVER_PORT", "8080")
 	if port == "" {
-		log.Fatal("SERVER_PORT is required")
+		log.Fatal("SERVER_PORT cannot be empty")
 	}
 
 	// 验证Gin模式
-	mode := utils.GetEnv("GIN_MODE")
+	mode := utils.GetEnvWithDefault("GIN_MODE", "debug")
 	validModes := []string{"debug", "release", "test"}
 	isValidMode := false
 	for _, validMode := range validModes {
@@ -60,6 +53,43 @@ func ValidateConfig() {
 	}
 	if !isValidMode {
 		log.Fatalf("GIN_MODE must be one of: %s", strings.Join(validModes, ", "))
+	}
+
+	// 验证数据库配置
+	dbHost := utils.GetEnvWithDefault("DB_HOST", "localhost")
+	dbPort := utils.GetEnvWithDefault("DB_PORT", "3306")
+	dbUser := utils.GetEnvWithDefault("DB_USER", "root")
+	dbName := utils.GetEnvWithDefault("DB_NAME", "blog")
+
+	if dbHost == "" || dbPort == "" || dbUser == "" || dbName == "" {
+		log.Fatal("Database configuration cannot have empty values")
+	}
+
+	// 验证日志级别
+	logLevel := utils.GetEnvWithDefault("LOG_LEVEL", "info")
+	validLogLevels := []string{"debug", "info", "warn", "error"}
+	isValidLogLevel := false
+	for _, validLevel := range validLogLevels {
+		if logLevel == validLevel {
+			isValidLogLevel = true
+			break
+		}
+	}
+	if !isValidLogLevel {
+		log.Fatalf("LOG_LEVEL must be one of: %s", strings.Join(validLogLevels, ", "))
+	}
+
+	// 验证数据库连接池配置
+	maxIdleConns := utils.GetEnvIntWithDefault("DB_MAX_IDLE_CONNS", 10)
+	maxOpenConns := utils.GetEnvIntWithDefault("DB_MAX_OPEN_CONNS", 100)
+	connMaxLifetime := utils.GetEnvIntWithDefault("DB_CONN_MAX_LIFETIME", 60)
+
+	if maxIdleConns <= 0 || maxOpenConns <= 0 || connMaxLifetime <= 0 {
+		log.Fatal("Database connection pool settings must be greater than 0")
+	}
+
+	if maxIdleConns > maxOpenConns {
+		log.Fatal("DB_MAX_IDLE_CONNS cannot be greater than DB_MAX_OPEN_CONNS")
 	}
 
 	log.Println("Configuration validation passed!")
@@ -74,8 +104,13 @@ func PrintConfig(cfg *Config) {
 	log.Printf("  Database Port: %s", cfg.Database.Port)
 	log.Printf("  Database User: %s", cfg.Database.User)
 	log.Printf("  Database Name: %s", cfg.Database.Database)
+	log.Printf("  Database Max Idle Conns: %d", cfg.Database.MaxIdleConns)
+	log.Printf("  Database Max Open Conns: %d", cfg.Database.MaxOpenConns)
+	log.Printf("  Database Conn Max Lifetime: %d minutes", cfg.Database.ConnMaxLifetime)
 	log.Printf("  JWT Expiration Hours: %d", cfg.JWT.ExpirationHours)
 	log.Printf("  JWT Secret: %s", maskSecret(cfg.JWT.Secret))
+	log.Printf("  Log Level: %s", cfg.Log.Level)
+	log.Printf("  Log Format: %s", cfg.Log.Format)
 }
 
 // maskSecret 隐藏敏感信息

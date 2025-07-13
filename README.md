@@ -11,6 +11,9 @@
 - ✅ **数据库设计** - 完整的数据库模型和关联关系
 - ✅ **错误处理** - 统一的错误处理和日志记录
 - ✅ **配置管理** - 环境变量配置，支持开发/生产环境
+- ✅ **优雅关闭** - 支持优雅关闭和资源清理
+- ✅ **请求追踪** - 请求ID追踪和结构化日志
+- ✅ **连接池优化** - 数据库连接池配置
 
 ## 🛠️ 技术栈
 
@@ -21,6 +24,7 @@
 - **认证**: JWT
 - **日志**: Zap
 - **密码加密**: bcrypt
+- **UUID**: Google UUID
 
 ## 📋 运行环境要求
 
@@ -94,15 +98,20 @@ CREATE DATABASE blog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 - `DB_HOST`: 数据库主机 (默认: localhost)
 - `DB_PORT`: 数据库端口 (默认: 3306)
 - `DB_USER`: 数据库用户名 (默认: root)
-- `DB_PASSWORD`: 数据库密码 (默认: 123456)
+- `DB_PASSWORD`: 数据库密码 (默认: 空)
 - `DB_NAME`: 数据库名称 (默认: blog)
+- `DB_MAX_IDLE_CONNS`: 最大空闲连接数 (默认: 10)
+- `DB_MAX_OPEN_CONNS`: 最大打开连接数 (默认: 100)
+- `DB_CONN_MAX_LIFETIME`: 连接最大生命周期(分钟) (默认: 60)
 
 **JWT配置:**
 - `JWT_SECRET`: JWT密钥 (必需，生产环境必须修改)
 - `JWT_EXPIRATION_HOURS`: JWT过期时间（小时）(默认: 24)
 
 **日志配置:**
-- `LOG_LEVEL`: 日志级别 (debug/info/warn/error)
+- `LOG_LEVEL`: 日志级别 (debug/info/warn/error) (默认: info)
+- `LOG_FORMAT`: 日志格式 (json/console) (默认: json)
+- `LOG_OUTPUT_PATH`: 日志输出路径 (默认: 控制台)
 
 ### 开发环境配置
 ```bash
@@ -113,9 +122,14 @@ export DB_PORT=3306
 export DB_USER=root
 export DB_PASSWORD=123456
 export DB_NAME=blog
+export DB_MAX_IDLE_CONNS=10
+export DB_MAX_OPEN_CONNS=100
+export DB_CONN_MAX_LIFETIME=60
 export JWT_SECRET=your-secret-key
 export JWT_EXPIRATION_HOURS=24
 export LOG_LEVEL=info
+export LOG_FORMAT=json
+export LOG_OUTPUT_PATH=""
 ```
 
 ### 生产环境配置
@@ -127,9 +141,14 @@ export DB_PORT=3306
 export DB_USER=blog_user
 export DB_PASSWORD=strong-password
 export DB_NAME=blog_prod
+export DB_MAX_IDLE_CONNS=20
+export DB_MAX_OPEN_CONNS=200
+export DB_CONN_MAX_LIFETIME=120
 export JWT_SECRET=your-super-secret-jwt-key
 export JWT_EXPIRATION_HOURS=168
 export LOG_LEVEL=info
+export LOG_FORMAT=json
+export LOG_OUTPUT_PATH="/var/log/blog/app.log"
 ```
 
 ## 📚 API文档
@@ -255,7 +274,8 @@ blog/
 │   ├── comment.go            # 评论请求结构
 │   └── comment_handler.go    # 评论处理器
 ├── middleware/                # 中间件
-│   └── auth.go               # JWT认证中间件
+│   ├── auth.go               # JWT认证中间件
+│   └── request_id.go         # 请求ID中间件
 ├── routes/                    # 路由配置
 │   └── routes.go             # 路由设置
 └── utils/                     # 工具函数
@@ -283,6 +303,16 @@ blog/
 项目使用Zap日志库，支持结构化日志：
 - 开发环境：JSON格式，包含时间戳和调用位置
 - 生产环境：建议设置LOG_LEVEL=info
+- 支持请求ID追踪：每个请求都有唯一的请求ID
+- 支持文件输出：通过LOG_OUTPUT_PATH配置
+
+### 优雅关闭
+
+项目支持优雅关闭：
+- 监听SIGINT和SIGTERM信号
+- 30秒超时关闭
+- 自动关闭数据库连接
+- 记录关闭日志
 
 ## 🧪 测试
 
@@ -337,6 +367,8 @@ curl -X POST "http://localhost:8080/api/auth/login" \
 - ✅ 软删除支持
 - ✅ 权限控制（作者只能操作自己的内容）
 - ✅ 环境变量配置（敏感信息不硬编码）
+- ✅ 请求ID追踪
+- ✅ 结构化日志记录
 
 ## 🚀 部署
 
@@ -372,3 +404,11 @@ CMD ["./main"]
 3. 提交更改：`git commit -am 'Add new feature'`
 4. 推送分支：`git push origin feature/new-feature`
 5. 提交Pull Request
+
+## 📄 许可证
+
+MIT License
+
+## 📞 联系方式
+
+如有问题或建议，请提交Issue或联系维护者。
