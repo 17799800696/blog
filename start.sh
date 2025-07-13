@@ -19,6 +19,9 @@ export DB_NAME=blog
 export JWT_SECRET=your-super-secret-jwt-key-change-in-production
 export JWT_EXPIRATION_HOURS=24
 
+# 日志配置
+export LOG_LEVEL=info
+
 echo "Environment variables set successfully!"
 echo "Starting blog server..."
 

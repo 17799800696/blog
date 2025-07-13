@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/test/blog/config"
 	"github.com/test/blog/routes"
+	"github.com/test/blog/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -15,6 +17,9 @@ func main() {
 
 	// 加载配置
 	cfg := config.LoadConfig()
+
+	// 初始化日志系统
+	utils.InitLogger()
 
 	// 打印配置信息
 	config.PrintConfig(cfg)
@@ -34,6 +39,8 @@ func main() {
 	// 启动服务器
 	serverAddr := fmt.Sprintf(":%s", cfg.Server.Port)
 	log.Printf("Server starting on %s", serverAddr)
+	utils.LogInfo("Server starting", zap.String("port", cfg.Server.Port))
+
 	if err := r.Run(serverAddr); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}

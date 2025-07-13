@@ -23,8 +23,20 @@ func SetupRoutes(r *gin.Engine) {
 		protected.Use(middleware.AuthMiddleware())
 		{
 			protected.GET("/profile", handlers.GetProfile)
-			// 后续会添加文章和评论相关的路由
+			// 文章相关路由
+			protected.POST("/posts", handlers.CreatePost)
+			protected.PUT("/posts/:id", handlers.UpdatePost)
+			protected.DELETE("/posts/:id", handlers.DeletePost)
+			// 评论相关路由（统一用:id）
+			protected.POST("/posts/:id/comments", handlers.CreateComment)
 		}
+
+		// 公开路由（无需认证）
+		// 文章相关路由
+		api.GET("/posts", handlers.GetPosts)
+		api.GET("/posts/:id", handlers.GetPost)
+		// 评论相关路由（统一用:id）
+		api.GET("/posts/:id/comments", handlers.GetComments)
 	}
 
 	// 健康检查
