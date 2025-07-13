@@ -396,19 +396,3 @@ CMD ["./main"]
 1. 编译项目：`go build -o blog .`
 2. 设置环境变量
 3. 运行：`./blog`
-
-## 🤝 贡献指南
-
-1. Fork项目
-2. 创建功能分支：`git checkout -b feature/new-feature`
-3. 提交更改：`git commit -am 'Add new feature'`
-4. 推送分支：`git push origin feature/new-feature`
-5. 提交Pull Request
-
-## 📄 许可证
-
-MIT License
-
-## 📞 联系方式
-
-如有问题或建议，请提交Issue或联系维护者。
