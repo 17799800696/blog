@@ -24,8 +24,6 @@ func main() {
 	// 加载配置
 	cfg := config.LoadConfig()
 
-	
-
 	// 初始化日志系统
 	utils.InitLogger()
 
