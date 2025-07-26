@@ -58,8 +58,8 @@ func Register(c *gin.Context) {
 		Email:    req.Email,
 	}
 
-	if err := config.GetDB().Create(&user).Error; err != nil {
-		utils.LogError("user creation error", err)
+	if createErr := config.GetDB().Create(&user).Error; createErr != nil {
+		utils.LogError("user creation error", createErr)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"message": "Failed to create user",
